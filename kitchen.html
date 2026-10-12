@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>Aromas — Kitchen Display System (KDS)</title>
+
+  <!-- Google Fonts & Material Symbols -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700;800&family=Montserrat:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"/>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              primary: '#ff6b35',
+              'primary-dark': '#ab3500',
+              accent: '#ffb59d',
+              surface: '#14120f',
+              'surface-card': '#1e1a16',
+              'surface-elevated': '#28231e',
+              'surface-border': '#3a322b',
+              veg: '#10b981',
+              warning: '#f59e0b',
+              danger: '#ef4444',
+              info: '#3b82f6'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Montserrat', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Firebase Scripts -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+
+  <style>
+    /* Kitchen High-Contrast Dark Display Styles */
+    :root {
+      color-scheme: dark;
+    }
+    body {
+      background-color: #0d0b09;
+      color: #f3ede7;
+      font-family: 'Inter', -apple-system, sans-serif;
+      user-select: none;
+      -webkit-font-smoothing: antialiased;
+    }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+    .font-display { font-family: 'Montserrat', sans-serif; }
+
+    /* Custom scrollbars for kitchen touchscreen monitors */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #14120f;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #3a322b;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #ff6b35;
+    }
+
+    /* Pulse animation for delayed orders */
+    @keyframes urgent-pulse {
+      0%, 100% { border-color: #ef4444; box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); }
+      50% { border-color: #7f1d1d; box-shadow: 0 0 5px rgba(239, 68, 68, 0.1); }
+    }
+    .urgent-ticket {
+      animation: urgent-pulse 2s infinite ease-in-out;
+    }
+
+    /* Print styles for thermal kitchen order tickets (KOT) */
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      #kot-print-area, #kot-print-area * {
+        visibility: visible;
+      }
+      #kot-print-area {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 80mm;
+        margin: 0;
+        padding: 4mm;
+        color: #000;
+        background: #fff;
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+      }
+      .no-print {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col bg-[#0d0b09] text-stone-100 overflow-x-hidden">
+
+  <!-- ========================================================================= -->
+  <!-- KITCHEN AUTH PIN LOCK SCREEN (Rendered if not logged in)                  -->
+  <!-- ========================================================================= -->
+  <div id="kitchen-lock-screen" class="fixed inset-0 z-50 bg-[#0d0b09]/95 backdrop-blur-2xl flex items-center justify-center p-4">
+    <div class="w-full max-w-md bg-[#191512] border border-[#352c25] rounded-3xl p-6 sm:p-8 shadow-2xl text-center flex flex-col items-center relative overflow-hidden">
+      <!-- Ambient Glow -->
+      <div class="absolute -top-24 -left-24 w-48 h-48 bg-orange-600/20 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="absolute -bottom-24 -right-24 w-48 h-48 bg-amber-600/20 rounded-full blur-3xl pointer-events-none"></div>
+
+      <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-gradient-to-tr from-[#ff6b35] to-[#ab3500] text-white flex items-center justify-center mb-4 shadow-xl shadow-orange-950/50">
+        <span class="material-symbols-outlined text-3xl sm:text-4xl">soup_kitchen</span>
+      </div>
+
+      <span class="font-mono text-xs text-[#ff6b35] font-bold uppercase tracking-widest">[ AROMAS CULINARY OPS ]</span>
+      <h2 class="font-display text-2xl sm:text-3xl font-extrabold text-white mt-1 mb-2">Kitchen Display Portal</h2>
+      <p class="text-xs text-stone-400 mb-4 max-w-xs">
+        Enter Master PIN or click Instant Sign-In to unlock the live preparation board.
+      </p>
+
+      <!-- 1-Click Instant Chef Sign-In Button -->
+      <button onclick="bypassKitchenLogin()" class="w-full py-3.5 bg-gradient-to-r from-[#ff6b35] to-orange-600 hover:from-orange-500 hover:to-orange-700 text-white font-mono text-xs sm:text-sm font-bold rounded-2xl shadow-lg shadow-orange-950/60 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer mb-5">
+        <span class="material-symbols-outlined text-lg">verified_user</span>
+        <span>⚡ Instant Chef Sign-In (Unlock All)</span>
+      </button>
+
+      <div class="w-full flex items-center gap-3 my-1 mb-4">
+        <div class="flex-1 h-[1px] bg-[#352c25]"></div>
+        <span class="text-[10px] font-mono text-stone-500 uppercase">Or Enter 4-Digit PIN</span>
+        <div class="flex-1 h-[1px] bg-[#352c25]"></div>
+      </div>
+
+      <!-- PIN Digits Display -->
+      <div class="flex items-center justify-center gap-3 mb-5">
+        <div id="pin-dot-1" class="w-4 h-4 rounded-full border-2 border-stone-600 transition-all"></div>
+        <div id="pin-dot-2" class="w-4 h-4 rounded-full border-2 border-stone-600 transition-all"></div>
+        <div id="pin-dot-3" class="w-4 h-4 rounded-full border-2 border-stone-600 transition-all"></div>
+        <div id="pin-dot-4" class="w-4 h-4 rounded-full border-2 border-stone-600 transition-all"></div>
+      </div>
+
+      <!-- Keypad -->
+      <div class="grid grid-cols-3 gap-2.5 w-full max-w-xs mb-5">
+        <button onclick="pressPin('1')" class="h-12 sm:h-13 rounded-2xl bg-[#231e1a] hover:bg-[#2e2722] active:bg-[#ff6b35] text-white font-mono text-lg font-bold border border-[#3a322b] transition-all cursor-pointer">1</button>
+        <button onclick="pressPin('2')" class="h-12 sm:h-13 rounded-2xl bg-[#231e1a] hover:bg-[#2e2722] active:bg-[#ff6b35] text-white font-mono text-lg font-bold border border-[#3a322b] transition-all cursor-pointer">2</button>
+        <button onclick="pressPin('3')" class="h-12 sm:h-13 rounded-2xl bg-[#231e1a] hover:bg-[#2e2722] active:bg-[#ff6b35] text-white font-mono text-lg font-bold border border-[#3a322b] transition-all cursor-pointer">3</button>
+        <button onclick="pressPin('4')" class="h-12 sm:h-13 rounded-2xl bg-[#231e1a] hover:bg-[#2e2722] active:bg-[#ff6b35] text-white font-mono text-lg font-bold border border-[#3a322b] transition-all cursor-pointer">4</button>
+        <button onclick="pressPin('5')" class="h-12 sm:h-13 rounded-2xl bg-[#231e1a] hover:bg-[#2e2722] active:bg-[#ff6b35] text-white font-mono text-lg font-bold border border-[#3a322b] transition-all cursor-pointer">5</button>
+        <button onclick="pressPin('6')" class="h-12 sm:h-13 rounded-2xl bg-[#231e1a] hover:bg-[#2e2722] active:bg-[#ff6b35] text-white font-mono text-lg font-bold border border-[#3a322b] transition-all cursor-pointer">6</button>
+        <button onclick="pressPin('7')" class="h-12 sm:h-13 rounded-2xl bg-[#231e1a] hover:bg-[#2e2722] active:bg-[#ff6b35] text-white font-mono text-lg font-bold border border-[#3a322b] transition-all cursor-pointer">7</button>
+        <button onclick="pressPin('8')" class="h-12 sm:h-13 rounded-2xl bg-[#231e1a] hover:bg-[#2e2722] active:bg-[#ff6b35] text-white font-mono text-lg font-bold border border-[#3a322b] transition-all cursor-pointer">8</button>
+        <button onclick="pressPin('9')" class="h-12 sm:h-13 rounded-2xl bg-[#231e1a] hover:bg-[#2e2722] active:bg-[#ff6b35] text-white font-mono text-lg font-bold border border-[#3a322b] transition-all cursor-pointer">9</button>
+        <button onclick="clearPin()" class="h-12 sm:h-13 rounded-2xl bg-[#231e1a] hover:bg-red-950/40 text-red-400 font-mono text-xs font-bold border border-[#3a322b] transition-all flex items-center justify-center cursor-pointer">
+          <span class="material-symbols-outlined text-base">backspace</span>
+        </button>
+        <button onclick="pressPin('0')" class="h-12 sm:h-13 rounded-2xl bg-[#231e1a] hover:bg-[#2e2722] active:bg-[#ff6b35] text-white font-mono text-lg font-bold border border-[#3a322b] transition-all cursor-pointer">0</button>
+        <button onclick="submitPin()" class="h-12 sm:h-13 rounded-2xl bg-[#ff6b35] hover:bg-[#ff8152] active:scale-95 text-white font-mono text-xs font-bold shadow-lg shadow-orange-950/50 transition-all flex items-center justify-center cursor-pointer">
+          <span class="material-symbols-outlined text-base">login</span>
+        </button>
+      </div>
+
+      <!-- Quick Demo Access Banner -->
+      <div class="w-full bg-[#231e1a]/80 p-2.5 rounded-2xl border border-[#3a322b] flex items-center justify-between">
+        <div class="text-left">
+          <p class="text-[11px] font-mono font-bold text-stone-300">Staff PINs: <span class="text-[#ff6b35]">8888</span> / <span class="text-[#ff6b35]">2026</span></p>
+          <p class="text-[10px] text-stone-500 font-mono">Keyboard typing enabled</p>
+        </div>
+        <div class="flex gap-1.5">
+          <button onclick="autoFillPin('8888')" class="px-2.5 py-1.5 rounded-xl bg-[#ff6b35]/20 hover:bg-[#ff6b35] text-[#ff6b35] hover:text-white text-xs font-mono font-bold transition-colors cursor-pointer">
+            8888
+          </button>
+          <button onclick="autoFillPin('2026')" class="px-2.5 py-1.5 rounded-xl bg-[#ff6b35]/20 hover:bg-[#ff6b35] text-[#ff6b35] hover:text-white text-xs font-mono font-bold transition-colors cursor-pointer">
+            2026
+          </button>
+        </div>
+      </div>
+
+      <!-- Link back to customer diner portal -->
+      <div class="mt-3">
+        <a href="index.html" class="text-xs font-mono text-stone-500 hover:text-stone-300 transition-colors flex items-center gap-1">
+          &larr; Return to Aromas Diner Menu
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MAIN KDS APP (Visible once authenticated)                                 -->
+  <!-- ========================================================================= -->
+  <div id="kitchen-app-container" class="flex flex-col min-h-screen">
+
+    <!-- Top KDS Navigation Bar -->
+    <header class="sticky top-0 z-40 bg-[#14110e]/95 backdrop-blur-md border-b border-[#2d251f] px-4 sm:px-6 py-3">
+      <div class="max-w-[1920px] mx-auto flex flex-wrap items-center justify-between gap-3">
+        
+        <!-- Left: Logo & Station Title -->
+        <div class="flex items-center gap-3.5">
+          <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#ab3500] to-[#ff6b35] text-white flex items-center justify-center shadow-md shadow-orange-950/40">
+            <span class="material-symbols-outlined text-2xl">restaurant</span>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h1 class="font-display font-extrabold text-lg sm:text-xl text-white tracking-tight">Aromas KDS</h1>
+              <span id="kitchen-connection-badge" class="px-2 py-0.5 rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-800/60 text-[10px] font-mono font-bold flex items-center gap-1" title="Real-time Cloud Sync Active">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span id="kitchen-connection-text">LIVE DISPATCH</span>
+              </span>
+            </div>
+            <p class="text-[11px] font-mono text-stone-400 hidden sm:block">
+              Kitchen Display System & Station Expeditor
+            </p>
+          </div>
+        </div>
+
+        <!-- Center: Primary Navigation (Orders Queue vs Stock Inventory) & View Modes -->
+        <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+          
+          <!-- Primary Module Tabs -->
+          <div class="inline-flex p-1 rounded-xl bg-[#201b16] border border-[#352c24]">
+            <button id="tab-btn-orders" onclick="setKitchenTab('orders')" class="px-3.5 py-1.5 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-1.5 bg-[#ff6b35] text-white shadow-sm">
+              <span class="material-symbols-outlined text-base">soup_kitchen</span>
+              <span>Orders Queue</span>
+            </button>
+            <button id="tab-btn-stock" onclick="setKitchenTab('stock')" class="px-3.5 py-1.5 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-1.5 text-stone-400 hover:text-white">
+              <span class="material-symbols-outlined text-base">inventory_2</span>
+              <span>Stock & Menu</span>
+            </button>
+            <button id="tab-btn-billing" onclick="setKitchenTab('billing')" class="px-3.5 py-1.5 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-1.5 text-stone-400 hover:text-white">
+              <span class="material-symbols-outlined text-base">receipt_long</span>
+              <span>Tax & Billing</span>
+            </button>
+          </div>
+
+          <!-- KDS View Modes (Shown only on Orders tab) -->
+          <div id="kds-view-modes-bar" class="inline-flex p-1 rounded-xl bg-[#201b16] border border-[#352c24]">
+            <button id="view-mode-kanban" onclick="setKdsViewMode('kanban')" class="px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-1.5 bg-[#ff6b35] text-white shadow-sm" title="Kanban Columns View">
+              <span class="material-symbols-outlined text-base">view_column</span>
+              <span class="hidden md:inline">Kanban</span>
+            </button>
+            <button id="view-mode-grid" onclick="setKdsViewMode('grid')" class="px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-1.5 text-stone-400 hover:text-stone-100" title="Ticket Matrix Grid">
+              <span class="material-symbols-outlined text-base">grid_view</span>
+              <span class="hidden md:inline">Tickets</span>
+            </button>
+            <button id="view-mode-table" onclick="setKdsViewMode('table')" class="px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-1.5 text-stone-400 hover:text-stone-100" title="Speed Dispatch Table">
+              <span class="material-symbols-outlined text-base">table_rows</span>
+              <span class="hidden md:inline">Dispatch List</span>
+            </button>
+          </div>
+
+          <!-- Add Dish Button (Visible across kitchen console) -->
+          <button onclick="openAddDishModal()" class="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-mono font-bold shadow-md shadow-emerald-950/40 hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-base">add_circle</span>
+            <span>+ Add Dish</span>
+          </button>
+
+          <!-- Digital Clock -->
+          <div class="hidden lg:flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#201b16] border border-[#352c24] text-xs font-mono text-stone-300">
+            <span class="material-symbols-outlined text-stone-400 text-sm">schedule</span>
+            <span id="kds-live-clock" class="font-bold text-[#ffb59d]">00:00:00</span>
+          </div>
+        </div>
+
+        <!-- Right: Actions (Sound, Filter, Fullscreen, Logout) -->
+        <div class="flex items-center gap-2 sm:gap-2.5">
+          <!-- Audio Alert Toggle -->
+          <button id="audio-toggle-btn" onclick="toggleKdsAudio()" class="w-9 h-9 rounded-xl bg-[#201b16] hover:bg-[#2b241e] border border-[#352c24] text-stone-300 hover:text-white flex items-center justify-center transition-all" title="Audio Chimes Active">
+            <span id="audio-icon" class="material-symbols-outlined text-lg text-emerald-400">volume_up</span>
+          </button>
+
+          <!-- Refresh Button -->
+          <button onclick="refreshKdsOrders(true)" class="w-9 h-9 rounded-xl bg-[#201b16] hover:bg-[#2b241e] border border-[#352c24] text-stone-300 hover:text-white flex items-center justify-center transition-all" title="Refresh Live Orders">
+            <span class="material-symbols-outlined text-lg">refresh</span>
+          </button>
+
+          <!-- Fullscreen Mode Toggle -->
+          <button onclick="toggleFullscreen()" class="w-9 h-9 rounded-xl bg-[#201b16] hover:bg-[#2b241e] border border-[#352c24] text-stone-300 hover:text-white hidden sm:flex items-center justify-center transition-all" title="Toggle Fullscreen Monitor Mode">
+            <span class="material-symbols-outlined text-lg">fullscreen</span>
+          </button>
+
+          <!-- Diner Menu Quick Link -->
+          <a href="index.html" target="_blank" class="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#201b16] hover:bg-[#2b241e] border border-[#352c24] text-xs font-mono text-stone-300 hover:text-white transition-all">
+            <span class="material-symbols-outlined text-sm">storefront</span>
+            <span>Diner Portal ↗</span>
+          </a>
+
+          <!-- Logout Button -->
+          <button onclick="logoutKitchenStaff()" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-red-950/40 hover:bg-red-900/60 text-red-300 border border-red-800/40 text-xs font-mono font-bold transition-all">
+            <span class="material-symbols-outlined text-sm">logout</span>
+            <span class="hidden sm:inline">Lock KDS</span>
+          </button>
+        </div>
+
+      </div>
+    </header>
+
+    <!-- Top Sub-Bar: Real-time Stats & Filters -->
+    <section id="kds-sub-bar" class="bg-[#110e0c] border-b border-[#251e18] px-4 sm:px-6 py-3">
+      <div class="max-w-[1920px] mx-auto flex flex-col md:flex-row md:items-center justify-between gap-3">
+        
+        <!-- Metrics Counters -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 flex-1">
+          <!-- Pending / Received -->
+          <div onclick="setKdsStatusFilter('Received')" class="p-2.5 sm:p-3 rounded-2xl bg-[#1b1713] border border-[#30261f] cursor-pointer hover:border-amber-500/60 transition-all flex items-center justify-between">
+            <div>
+              <span class="text-[10px] font-mono text-stone-400 uppercase font-bold">1. New Orders</span>
+              <div id="stat-received" class="font-display text-xl sm:text-2xl font-black text-amber-400">0</div>
+            </div>
+            <div class="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-400 flex items-center justify-center">
+              <span class="material-symbols-outlined text-lg">receipt_long</span>
+            </div>
+          </div>
+
+          <!-- Cooking in Kitchen -->
+          <div onclick="setKdsStatusFilter('Cooking in Kitchen')" class="p-2.5 sm:p-3 rounded-2xl bg-[#1b1713] border border-[#30261f] cursor-pointer hover:border-[#ff6b35]/60 transition-all flex items-center justify-between">
+            <div>
+              <span class="text-[10px] font-mono text-stone-400 uppercase font-bold">2. Cooking</span>
+              <div id="stat-cooking" class="font-display text-xl sm:text-2xl font-black text-[#ff6b35]">0</div>
+            </div>
+            <div class="w-8 h-8 rounded-xl bg-orange-500/15 text-[#ff6b35] flex items-center justify-center">
+              <span class="material-symbols-outlined text-lg">outdoor_grill</span>
+            </div>
+          </div>
+
+          <!-- Ready for Dispatch -->
+          <div onclick="setKdsStatusFilter('Ready for Pickup')" class="p-2.5 sm:p-3 rounded-2xl bg-[#1b1713] border border-[#30261f] cursor-pointer hover:border-emerald-500/60 transition-all flex items-center justify-between">
+            <div>
+              <span class="text-[10px] font-mono text-stone-400 uppercase font-bold">3. Ready / Pickup</span>
+              <div id="stat-ready" class="font-display text-xl sm:text-2xl font-black text-emerald-400">0</div>
+            </div>
+            <div class="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
+              <span class="material-symbols-outlined text-lg">notifications_active</span>
+            </div>
+          </div>
+
+          <!-- Total Completed -->
+          <div onclick="setKdsStatusFilter('Completed')" class="p-2.5 sm:p-3 rounded-2xl bg-[#1b1713] border border-[#30261f] cursor-pointer hover:border-stone-500/60 transition-all flex items-center justify-between">
+            <div>
+              <span class="text-[10px] font-mono text-stone-400 uppercase font-bold">4. Handed Over</span>
+              <div id="stat-completed" class="font-display text-xl sm:text-2xl font-black text-stone-400">0</div>
+            </div>
+            <div class="w-8 h-8 rounded-xl bg-stone-700/20 text-stone-400 flex items-center justify-center">
+              <span class="material-symbols-outlined text-lg">done_all</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Filters & Search -->
+        <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+          <!-- Location Filter -->
+          <select id="kds-location-select" onchange="handleLocationFilterChange(this.value)" class="h-10 px-3 rounded-xl bg-[#1b1713] border border-[#30261f] text-xs font-mono font-bold text-stone-200 focus:outline-none focus:border-[#ff6b35]">
+            <option value="all">📍 All Locations</option>
+            <option value="Main Campus">📍 Main Campus</option>
+            <option value="AU Quasar">📍 AU Quasar</option>
+          </select>
+
+          <!-- Status Filter Tabs (for Grid & List mode) -->
+          <div class="hidden sm:inline-flex p-1 rounded-xl bg-[#1b1713] border border-[#30261f]">
+            <button id="status-btn-active" onclick="setKdsStatusFilter('active')" class="px-3 py-1 rounded-lg text-xs font-mono font-bold bg-[#ff6b35] text-white">Active Queue</button>
+            <button id="status-btn-all" onclick="setKdsStatusFilter('all')" class="px-3 py-1 rounded-lg text-xs font-mono font-bold text-stone-400 hover:text-white">All Tickets</button>
+          </div>
+
+          <!-- Search Bar -->
+          <div class="relative flex-1 sm:w-56">
+            <input 
+              type="text" 
+              id="kds-search-input" 
+              placeholder="Search token #, item, phone..." 
+              oninput="handleSearch(this.value)"
+              class="w-full h-10 pl-9 pr-3 rounded-xl bg-[#1b1713] border border-[#30261f] text-xs font-mono text-stone-200 placeholder-stone-500 focus:outline-none focus:border-[#ff6b35]"
+            />
+            <span class="material-symbols-outlined absolute left-2.5 top-2.5 text-stone-500 text-base pointer-events-none">search</span>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- KDS DYNAMIC CONTENT CONTAINER                                             -->
+    <!-- ========================================================================= -->
+    <main id="kds-main-viewport" class="flex-1 p-4 sm:p-6 max-w-[1920px] w-full mx-auto">
+      <!-- Injected dynamically by js/kitchen.js -->
+    </main>
+
+    <!-- Sound Notice Modal / Overlay (First Interaction helper) -->
+    <div id="sound-activation-banner" class="hidden fixed bottom-6 right-6 z-50 bg-[#1e1a16] border border-[#ff6b35] p-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-bounce">
+      <span class="material-symbols-outlined text-[#ff6b35] text-2xl">volume_up</span>
+      <div>
+        <p class="text-xs font-bold text-white">Enable Audio Chimes</p>
+        <p class="text-[11px] text-stone-400">Click anywhere to enable kitchen audible order bells.</p>
+      </div>
+      <button onclick="enableKitchenAudioContext()" class="px-3 py-1.5 bg-[#ff6b35] text-white font-mono text-xs font-bold rounded-xl hover:bg-orange-600 transition-colors">
+        Enable Audio
+      </button>
+    </div>
+
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- THERMAL KOT PRINT MODAL (Hidden in normal view, triggers print)           -->
+  <!-- ========================================================================= -->
+  <div id="kot-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white text-black p-6 rounded-2xl w-full max-w-sm font-mono text-xs shadow-2xl">
+      <div id="kot-print-area">
+        <!-- Injected dynamically for KOT ticket printing -->
+      </div>
+      <div class="mt-4 pt-3 border-t border-stone-200 flex justify-end gap-2 no-print">
+        <button onclick="closeKotModal()" class="px-4 py-2 bg-stone-200 hover:bg-stone-300 text-stone-800 font-bold rounded-xl">Close</button>
+        <button onclick="window.print()" class="px-4 py-2 bg-[#ab3500] hover:bg-orange-700 text-white font-bold rounded-xl flex items-center gap-1">
+          <span class="material-symbols-outlined text-sm">print</span> Print KOT
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- ADD NEW MENU ITEM MODAL                                                   -->
+  <!-- ========================================================================= -->
+  <div id="add-dish-modal" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+    <div onclick="closeAddDishModal()" class="absolute inset-0"></div>
+    <div class="relative w-full max-w-xl bg-[#191512] border border-[#352c25] rounded-3xl p-6 sm:p-8 shadow-2xl z-10 my-8">
+      
+      <div class="flex justify-between items-start mb-5">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#ff6b35] to-[#ab3500] text-white flex items-center justify-center shadow-md shadow-orange-950/40">
+            <span class="material-symbols-outlined text-xl">add_circle</span>
+          </div>
+          <div>
+            <h3 class="font-display text-xl font-bold text-white">Add New Dish to Menu</h3>
+            <p class="text-xs text-stone-400">Put a new culinary creation directly on the active customer menu</p>
+          </div>
+        </div>
+        <button onclick="closeAddDishModal()" class="w-8 h-8 rounded-full bg-[#26201b] hover:bg-[#382f28] text-stone-400 hover:text-white flex items-center justify-center transition-colors">
+          <span class="material-symbols-outlined text-sm">close</span>
+        </button>
+      </div>
+
+      <form id="add-dish-form" onsubmit="handleAddNewDishSubmit(event)" class="flex flex-col gap-4">
+        <div>
+          <label class="block text-[11px] font-mono font-bold text-stone-300 uppercase mb-1">Dish Name *</label>
+          <input type="text" id="new-dish-name" required placeholder="e.g. Paneer Lababdar Special" class="w-full px-3.5 py-2.5 rounded-xl bg-[#231d18] border border-[#3d332a] text-xs font-mono text-white focus:outline-none focus:border-[#ff6b35]" />
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-mono font-bold text-stone-300 uppercase mb-1">Dish Category *</label>
+          
+          <!-- Category Quick Selection Chips -->
+          <div class="flex flex-wrap gap-1.5 mb-2.5">
+            <button type="button" onclick="selectDishCategoryPreset('starters')" class="cat-chip-btn px-2.5 py-1 rounded-lg bg-[#2b221a] hover:bg-[#ff6b35] hover:text-white border border-[#3d332a] text-[11px] font-mono text-stone-300 transition-all active:scale-95 cursor-pointer" data-cat="starters">🥟 Starters</button>
+            <button type="button" onclick="selectDishCategoryPreset('north-indian')" class="cat-chip-btn px-2.5 py-1 rounded-lg bg-[#2b221a] hover:bg-[#ff6b35] hover:text-white border border-[#3d332a] text-[11px] font-mono text-stone-300 transition-all active:scale-95 cursor-pointer" data-cat="north-indian">🍛 North Indian (Mains)</button>
+            <button type="button" onclick="selectDishCategoryPreset('south-indian')" class="cat-chip-btn px-2.5 py-1 rounded-lg bg-[#2b221a] hover:bg-[#ff6b35] hover:text-white border border-[#3d332a] text-[11px] font-mono text-stone-300 transition-all active:scale-95 cursor-pointer" data-cat="south-indian">🥘 South Indian</button>
+            <button type="button" onclick="selectDishCategoryPreset('biryani-rice')" class="cat-chip-btn px-2.5 py-1 rounded-lg bg-[#2b221a] hover:bg-[#ff6b35] hover:text-white border border-[#3d332a] text-[11px] font-mono text-stone-300 transition-all active:scale-95 cursor-pointer" data-cat="biryani-rice">🍚 Biryani & Rice</button>
+            <button type="button" onclick="selectDishCategoryPreset('street-food')" class="cat-chip-btn px-2.5 py-1 rounded-lg bg-[#2b221a] hover:bg-[#ff6b35] hover:text-white border border-[#3d332a] text-[11px] font-mono text-stone-300 transition-all active:scale-95 cursor-pointer" data-cat="street-food">🥪 Street Food (Snacks)</button>
+            <button type="button" onclick="selectDishCategoryPreset('breads')" class="cat-chip-btn px-2.5 py-1 rounded-lg bg-[#2b221a] hover:bg-[#ff6b35] hover:text-white border border-[#3d332a] text-[11px] font-mono text-stone-300 transition-all active:scale-95 cursor-pointer" data-cat="breads">🫓 Breads</button>
+            <button type="button" onclick="selectDishCategoryPreset('desserts')" class="cat-chip-btn px-2.5 py-1 rounded-lg bg-[#2b221a] hover:bg-[#ff6b35] hover:text-white border border-[#3d332a] text-[11px] font-mono text-stone-300 transition-all active:scale-95 cursor-pointer" data-cat="desserts">🍨 Desserts</button>
+            <button type="button" onclick="selectDishCategoryPreset('beverages')" class="cat-chip-btn px-2.5 py-1 rounded-lg bg-[#2b221a] hover:bg-[#ff6b35] hover:text-white border border-[#3d332a] text-[11px] font-mono text-stone-300 transition-all active:scale-95 cursor-pointer" data-cat="beverages">🥤 Beverages</button>
+            <button type="button" onclick="selectDishCategoryPreset('combos')" class="cat-chip-btn px-2.5 py-1 rounded-lg bg-[#2b221a] hover:bg-[#ff6b35] hover:text-white border border-[#3d332a] text-[11px] font-mono text-stone-300 transition-all active:scale-95 cursor-pointer" data-cat="combos">🍱 Combos</button>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label class="block text-[10px] font-mono text-stone-400 uppercase mb-1">Selected Category *</label>
+              <select id="new-dish-category" onchange="handleCategoryDropdownChange(this.value)" class="w-full px-3 py-2.5 rounded-xl bg-[#231d18] border border-[#3d332a] text-xs font-mono text-white focus:outline-none focus:border-[#ff6b35]">
+                <option value="starters">🥟 Starters & Appetizers</option>
+                <option value="north-indian">🍛 North Indian Mains</option>
+                <option value="south-indian">🥘 South Indian Classics</option>
+                <option value="biryani-rice">🍚 Biryani & Rice</option>
+                <option value="street-food">🥪 Street Food & Chaat (Snacks)</option>
+                <option value="breads">🫓 Artisanal Breads</option>
+                <option value="desserts">🍨 Decadent Desserts</option>
+                <option value="beverages">🥤 Beverages & Shakes</option>
+                <option value="combos">🍱 Chef's Value Combos</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-[10px] font-mono text-stone-400 uppercase mb-1">Dietary Tag *</label>
+              <select id="new-dish-dietary" class="w-full px-3 py-2.5 rounded-xl bg-[#231d18] border border-[#3d332a] text-xs font-mono text-white focus:outline-none focus:border-[#ff6b35]">
+                <option value="veg">🟢 Veg</option>
+                <option value="non-veg">🔴 Non-Veg</option>
+                <option value="vegan">🌱 Vegan</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-[10px] font-mono text-stone-400 uppercase mb-1">Price (₹) *</label>
+              <input type="number" id="new-dish-price" min="1" required placeholder="140" class="w-full px-3.5 py-2.5 rounded-xl bg-[#231d18] border border-[#3d332a] text-xs font-mono text-white focus:outline-none focus:border-[#ff6b35]" />
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] font-mono font-bold text-stone-300 uppercase mb-1">Initial Kitchen Stock *</label>
+            <input type="number" id="new-dish-stock" min="0" value="25" required placeholder="25" class="w-full px-3.5 py-2.5 rounded-xl bg-[#231d18] border border-[#3d332a] text-xs font-mono text-white focus:outline-none focus:border-[#ff6b35]" />
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-mono font-bold text-stone-300 uppercase mb-1">Estimated Prep Time</label>
+            <input type="text" id="new-dish-prep" value="10-15 min" placeholder="e.g. 10-15 min" class="w-full px-3.5 py-2.5 rounded-xl bg-[#231d18] border border-[#3d332a] text-xs font-mono text-white focus:outline-none focus:border-[#ff6b35]" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-mono font-bold text-stone-300 uppercase mb-1">Dish Description</label>
+          <textarea id="new-dish-desc" rows="2" placeholder="Rich spiced gravy simmered with fresh herbs and aromatic whole spices..." class="w-full px-3.5 py-2 rounded-xl bg-[#231d18] border border-[#3d332a] text-xs font-mono text-white focus:outline-none focus:border-[#ff6b35] resize-none"></textarea>
+        </div>
+
+        <!-- Dish Photo Upload & Image Selection -->
+        <div>
+          <label class="block text-[11px] font-mono font-bold text-stone-300 uppercase mb-1 flex items-center justify-between">
+            <span>Dish Photo *</span>
+            <span class="text-[10px] text-[#ff6b35] font-normal font-mono">Upload from device or choose preset</span>
+          </label>
+          
+          <!-- Hidden File Input for Device Photo Upload -->
+          <input type="file" id="new-dish-file" accept="image/*" class="hidden" onchange="handleDishPhotoUpload(this)" />
+
+          <!-- Photo Upload Dropzone / Trigger -->
+          <div id="new-dish-upload-zone" onclick="document.getElementById('new-dish-file').click()" class="border-2 border-dashed border-[#4a3b30] hover:border-[#ff6b35] bg-[#231d18] hover:bg-[#2a221c] rounded-2xl p-4 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-1.5 group">
+            <div class="w-10 h-10 rounded-full bg-[#352c23] group-hover:bg-[#ff6b35] text-stone-300 group-hover:text-white flex items-center justify-center transition-colors">
+              <span class="material-symbols-outlined text-xl">add_photo_alternate</span>
+            </div>
+            <div class="flex flex-col">
+              <span class="text-xs font-mono font-bold text-white group-hover:text-[#ff6b35] transition-colors">📁 Click to Upload Photo from Device / Gallery</span>
+              <span class="text-[10px] font-mono text-stone-400">PNG, JPG, WebP, Camera photos</span>
+            </div>
+          </div>
+
+          <!-- Live Photo Preview Box (Shown after photo is selected) -->
+          <div id="new-dish-photo-preview" class="hidden bg-[#231d18] border border-orange-500/40 rounded-2xl p-3 flex items-center justify-between gap-3 animate-fadeIn">
+            <div class="flex items-center gap-3 min-w-0">
+              <img id="new-dish-preview-img" src="" alt="Dish Preview" class="w-14 h-14 rounded-xl object-cover border border-orange-500/30 shadow-md" />
+              <div class="flex flex-col min-w-0">
+                <span class="text-xs font-mono font-bold text-white truncate">Photo Attached</span>
+                <span id="new-dish-photo-name" class="text-[10px] font-mono text-orange-400 truncate">photo.jpg</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <button type="button" onclick="document.getElementById('new-dish-file').click()" class="px-2.5 py-1.5 rounded-lg bg-[#33281f] hover:bg-[#443529] text-xs font-mono text-stone-200 transition-colors cursor-pointer">
+                Change
+              </button>
+              <button type="button" onclick="clearUploadedDishPhoto()" class="px-2.5 py-1.5 rounded-lg bg-red-950/60 hover:bg-red-900 text-xs font-mono text-red-300 transition-colors cursor-pointer">
+                Remove
+              </button>
+            </div>
+          </div>
+
+          <!-- Alternative Option: Image URL / Presets Dropdown -->
+          <div class="mt-2.5 pt-2 border-t border-[#33281f]">
+            <div class="flex items-center justify-between mb-1 text-[10px] font-mono text-stone-400">
+              <span>Or use Image URL / Presets:</span>
+            </div>
+            <input type="url" id="new-dish-image" placeholder="https://images.unsplash.com/..." class="w-full px-3.5 py-2 rounded-xl bg-[#231d18] border border-[#3d332a] text-xs font-mono text-white focus:outline-none focus:border-[#ff6b35]" />
+            <div class="flex flex-wrap gap-1.5 mt-1.5 text-[10px] font-mono">
+              <span class="text-stone-500 py-0.5">Quick Presets:</span>
+              <button type="button" onclick="setQuickDishImage('starter')" class="px-2 py-0.5 rounded bg-[#2a231d] hover:bg-[#ff6b35] hover:text-white text-stone-300 transition-colors cursor-pointer">🥟 Starter</button>
+              <button type="button" onclick="setQuickDishImage('curry')" class="px-2 py-0.5 rounded bg-[#2a231d] hover:bg-[#ff6b35] hover:text-white text-stone-300 transition-colors cursor-pointer">🍛 North Indian</button>
+              <button type="button" onclick="setQuickDishImage('biryani')" class="px-2 py-0.5 rounded bg-[#2a231d] hover:bg-[#ff6b35] hover:text-white text-stone-300 transition-colors cursor-pointer">🍚 Biryani</button>
+              <button type="button" onclick="setQuickDishImage('bread')" class="px-2 py-0.5 rounded bg-[#2a231d] hover:bg-[#ff6b35] hover:text-white text-stone-300 transition-colors cursor-pointer">🫓 Naan/Roti</button>
+              <button type="button" onclick="setQuickDishImage('shake')" class="px-2 py-0.5 rounded bg-[#2a231d] hover:bg-[#ff6b35] hover:text-white text-stone-300 transition-colors cursor-pointer">🥤 Beverage</button>
+              <button type="button" onclick="setQuickDishImage('dessert')" class="px-2 py-0.5 rounded bg-[#2a231d] hover:bg-[#ff6b35] hover:text-white text-stone-300 transition-colors cursor-pointer">🍨 Dessert</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex gap-3 mt-3 pt-3 border-t border-[#30261f]">
+          <button type="button" onclick="closeAddDishModal()" class="px-5 py-3 rounded-full bg-[#26201b] hover:bg-[#352c24] text-stone-300 text-xs font-mono font-bold transition-colors cursor-pointer">
+            Cancel
+          </button>
+          <button type="submit" class="flex-1 py-3 bg-[#ff6b35] hover:bg-orange-600 text-white font-mono text-xs font-bold rounded-full shadow-lg shadow-orange-950/50 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+            <span class="material-symbols-outlined text-base">restaurant_menu</span>
+            <span>Publish to Customer Menu</span>
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: EDIT DISH & CATEGORY (Instant Real-Time Reassignment)             -->
+  <!-- ========================================================================= -->
+  <div id="edit-dish-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div onclick="closeEditDishModal()" class="modal-backdrop absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
+    <div class="modal-card relative w-full max-w-xl bg-[#1a1613] rounded-3xl p-6 sm:p-7 shadow-2xl z-10 border border-[#3e342b] max-h-[90vh] overflow-y-auto">
+      
+      <div class="flex items-center justify-between pb-4 mb-4 border-b border-[#30261f]">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-[#ff6b35]/20 text-[#ff6b35] flex items-center justify-center">
+            <span class="material-symbols-outlined text-xl">edit_note</span>
+          </div>
+          <div>
+            <h3 class="font-display text-lg font-bold text-white">Edit Dish & Category</h3>
+            <p class="text-[11px] font-mono text-stone-400">Reassign category, price, or stock in real-time</p>
+          </div>
+        </div>
+        <button onclick="closeEditDishModal()" class="w-8 h-8 rounded-full bg-[#26201b] hover:bg-[#382f28] text-stone-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer">
+          <span class="material-symbols-outlined text-sm">close</span>
+        </button>
+      </div>
+
+      <form id="edit-dish-form" onsubmit="handleEditDishSubmit(event)" class="flex flex-col gap-4">
+        <input type="hidden" id="edit-dish-id" />
+
+        <div>
+          <label class="block text-[11px] font-mono font-bold text-stone-300 uppercase mb-1">Dish Name *</label>
+          <input type="text" id="edit-dish-name" required class="w-full px-3.5 py-2.5 rounded-xl bg-[#231d18] border border-[#3d332a] text-xs font-mono text-white focus:outline-none focus:border-[#ff6b35]" />
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-mono font-bold text-stone-300 uppercase mb-1">Reassign Category *</label>
+          
+          <div class="flex flex-wrap gap-1.5 mb-2.5">
+            <button type="button" onclick="selectEditCategoryPreset('starters')" class="edit-cat-chip px-2.5 py-1 rounded-lg bg-[#2b221a] hover:bg-[#ff6b35] hover:text-white border border-[#3d332a] text-[11px] font-mono text-stone-300 transition-all active:scale-95 cursor-pointer" data-cat="starters">🥟 Starters</button>
+            <button type="button" onclick="selectEditCategoryPreset('north-indian')" class="edit-cat-chip px-2.5 py-1 rounded-lg bg-[#2b221a] hover:bg-[#ff6b35] hover:text-white border border-[#3d332a] text-[11px] font-mono text-stone-300 transition-all active:scale-95 cursor-pointer" data-cat="north-indian">🍛 North Indian</button>
+            <button type="button" onclick="selectEditCategoryPreset('south-indian')" class="edit-cat-chip px-2.5 py-1 rounded-lg bg-[#2b221a] hover:bg-[#ff6b35] hover:text-white border border-[#3d332a] text-[11px] font-mono text-stone-300 transition-all active:scale-95 cursor-pointer" data-cat="south-indian">🥘 South Indian</button>
+            <button type="button" onclick="selectEditCategoryPreset('biryani-rice')" class="edit-cat-chip px-2.5 py-1 rounded-lg bg-[#2b221a] hover:bg-[#ff6b35] hover:text-white border border-[#3d332a] text-[11px] font-mono text-stone-300 transition-all active:scale-95 cursor-pointer" data-cat="biryani-rice">🍚 Biryani</button>
+            <button type="button" onclick="selectEditCategoryPreset('street-food')" class="edit-cat-chip px-2.5 py-1 rounded-lg bg-[#2b221a] hover:bg-[#ff6b35] hover:text-white border border-[#3d332a] text-[11px] font-mono text-stone-300 transition-all active:scale-95 cursor-pointer" data-cat="street-food">🥪 Street Food</button>
+            <button type="button" onclick="selectEditCategoryPreset('breads')" class="edit-cat-chip px-2.5 py-1 rounded-lg bg-[#2b221a] hover:bg-[#ff6b35] hover:text-white border border-[#3d332a] text-[11px] font-mono text-stone-300 transition-all active:scale-95 cursor-pointer" data-cat="breads">🫓 Breads</button>
+            <button type="button" onclick="selectEditCategoryPreset('desserts')" class="edit-cat-chip px-2.5 py-1 rounded-lg bg-[#2b221a] hover:bg-[#ff6b35] hover:text-white border border-[#3d332a] text-[11px] font-mono text-stone-300 transition-all active:scale-95 cursor-pointer" data-cat="desserts">🍨 Desserts</button>
+            <button type="button" onclick="selectEditCategoryPreset('beverages')" class="edit-cat-chip px-2.5 py-1 rounded-lg bg-[#2b221a] hover:bg-[#ff6b35] hover:text-white border border-[#3d332a] text-[11px] font-mono text-stone-300 transition-all active:scale-95 cursor-pointer" data-cat="beverages">🥤 Beverages</button>
+            <button type="button" onclick="selectEditCategoryPreset('combos')" class="edit-cat-chip px-2.5 py-1 rounded-lg bg-[#2b221a] hover:bg-[#ff6b35] hover:text-white border border-[#3d332a] text-[11px] font-mono text-stone-300 transition-all active:scale-95 cursor-pointer" data-cat="combos">🍱 Combos</button>
+          </div>
+
+          <select id="edit-dish-category" class="w-full px-3 py-2.5 rounded-xl bg-[#231d18] border border-[#3d332a] text-xs font-mono text-white focus:outline-none focus:border-[#ff6b35]">
+            <option value="starters">🥟 Starters & Appetizers</option>
+            <option value="north-indian">🍛 North Indian Mains</option>
+            <option value="south-indian">🥘 South Indian Classics</option>
+            <option value="biryani-rice">🍚 Biryani & Rice</option>
+            <option value="street-food">🥪 Street Food & Chaat</option>
+            <option value="breads">🫓 Artisanal Breads</option>
+            <option value="desserts">🍨 Decadent Desserts</option>
+            <option value="beverages">🥤 Beverages & Shakes</option>
+            <option value="combos">🍱 Chef's Value Combos</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-[11px] font-mono font-bold text-stone-300 uppercase mb-1">Price (₹) *</label>
+            <input type="number" id="edit-dish-price" min="1" required class="w-full px-3.5 py-2.5 rounded-xl bg-[#231d18] border border-[#3d332a] text-xs font-mono text-white focus:outline-none focus:border-[#ff6b35]" />
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-mono font-bold text-stone-300 uppercase mb-1">Current Stock *</label>
+            <input type="number" id="edit-dish-stock" min="0" required class="w-full px-3.5 py-2.5 rounded-xl bg-[#231d18] border border-[#3d332a] text-xs font-mono text-white focus:outline-none focus:border-[#ff6b35]" />
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-mono font-bold text-stone-300 uppercase mb-1">Dietary Tag</label>
+            <select id="edit-dish-dietary" class="w-full px-3 py-2.5 rounded-xl bg-[#231d18] border border-[#3d332a] text-xs font-mono text-white focus:outline-none focus:border-[#ff6b35]">
+              <option value="veg">🟢 Veg</option>
+              <option value="non-veg">🔴 Non-Veg</option>
+              <option value="vegan">🌱 Vegan</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-mono font-bold text-stone-300 uppercase mb-1">Description</label>
+          <textarea id="edit-dish-desc" rows="2" class="w-full px-3.5 py-2 rounded-xl bg-[#231d18] border border-[#3d332a] text-xs font-mono text-white focus:outline-none focus:border-[#ff6b35] resize-none"></textarea>
+        </div>
+
+        <!-- Dish Image Management Section in Edit Modal -->
+        <div>
+          <label class="block text-[11px] font-mono font-bold text-stone-300 uppercase mb-1 flex items-center justify-between">
+            <span>Dish Image</span>
+            <span id="edit-dish-image-status" class="text-[10px] text-stone-400 font-normal font-mono">Current active photo</span>
+          </label>
+          
+          <input type="file" id="edit-dish-file" accept="image/jpeg,image/png,image/webp,image/jpg" class="hidden" onchange="handleEditDishPhotoUpload(this)" />
+          <input type="hidden" id="edit-dish-image-url" />
+
+          <!-- Existing Image Display / Preview Card -->
+          <div id="edit-dish-image-box" class="bg-[#231d18] border border-[#3d332a] rounded-2xl p-3 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div class="flex items-center gap-3 w-full sm:w-auto">
+              <img id="edit-dish-preview-img" src="" alt="Dish Image" class="w-16 h-16 rounded-xl object-cover border border-[#4a3b30] shadow-md bg-stone-900 flex-shrink-0" onerror="this.src='https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=100&q=80'" />
+              <div class="flex flex-col min-w-0">
+                <span id="edit-dish-img-label" class="text-xs font-mono font-bold text-white truncate">Active Menu Photo</span>
+                <span id="edit-dish-img-subtext" class="text-[10px] font-mono text-stone-400 truncate">Synced with Dining Portal</span>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+              <button type="button" id="edit-dish-upload-btn" onclick="document.getElementById('edit-dish-file').click()" class="px-3 py-2 rounded-xl bg-[#352c23] hover:bg-[#ff6b35] hover:text-white text-stone-300 text-xs font-mono font-bold transition-all flex items-center gap-1 cursor-pointer">
+                <span class="material-symbols-outlined text-sm">add_photo_alternate</span>
+                <span id="edit-dish-upload-btn-text">Change Photo</span>
+              </button>
+              <button type="button" id="edit-dish-remove-btn" onclick="confirmRemoveDishPhoto()" class="px-3 py-2 rounded-xl bg-red-950/50 hover:bg-red-900 border border-red-800/40 text-red-300 text-xs font-mono font-bold transition-all flex items-center gap-1 cursor-pointer">
+                <span class="material-symbols-outlined text-sm">delete</span>
+                <span>Remove</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Upload Progress Bar (hidden by default) -->
+          <div id="edit-dish-upload-progress" class="hidden mt-2 p-2.5 bg-[#231d18] rounded-xl border border-orange-500/30">
+            <div class="flex justify-between text-[10px] font-mono text-orange-400 mb-1">
+              <span id="edit-upload-progress-text">Uploading image...</span>
+              <span id="edit-upload-progress-pct">0%</span>
+            </div>
+            <div class="w-full h-1.5 bg-stone-800 rounded-full overflow-hidden">
+              <div id="edit-upload-progress-bar" class="h-full bg-[#ff6b35] transition-all duration-300" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex gap-3 mt-3 pt-3 border-t border-[#30261f]">
+          <button type="button" onclick="closeEditDishModal()" class="px-5 py-3 rounded-full bg-[#26201b] hover:bg-[#352c24] text-stone-300 text-xs font-mono font-bold transition-colors cursor-pointer">
+            Cancel
+          </button>
+          <button type="submit" id="edit-dish-submit-btn" class="flex-1 py-3 bg-[#ff6b35] hover:bg-orange-600 text-white font-mono text-xs font-bold rounded-full shadow-lg shadow-orange-950/50 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+            <span class="material-symbols-outlined text-base">check_circle</span>
+            <span>Save Changes</span>
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: CONFIRM REMOVE PHOTO                                              -->
+  <!-- ========================================================================= -->
+  <div id="confirm-remove-photo-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div onclick="closeRemovePhotoModal()" class="modal-backdrop absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
+    <div class="modal-card relative w-full max-w-sm bg-[#1a1613] rounded-3xl p-6 shadow-2xl z-10 border border-[#3e342b] text-center">
+      <div class="w-12 h-12 rounded-2xl bg-red-950/80 border border-red-800 text-red-400 flex items-center justify-center mx-auto mb-3">
+        <span class="material-symbols-outlined text-2xl">delete_forever</span>
+      </div>
+      <h3 class="font-display text-base font-bold text-white mb-1">Remove dish photo?</h3>
+      <p class="text-xs font-mono text-stone-400 mb-5">This will remove the photo from the menu.</p>
+      <div class="flex gap-2.5">
+        <button type="button" onclick="closeRemovePhotoModal()" class="flex-1 py-2.5 rounded-full bg-[#26201b] hover:bg-[#352c24] text-stone-300 text-xs font-mono font-bold transition-colors cursor-pointer">
+          Cancel
+        </button>
+        <button type="button" onclick="executeRemoveDishPhoto()" class="flex-1 py-2.5 rounded-full bg-red-600 hover:bg-red-700 text-white text-xs font-mono font-bold transition-colors cursor-pointer">
+          Remove
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="kds-toast-container" class="fixed bottom-5 left-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- App Core Script Dependencies -->
+  <script src="js/menu-data.js?v=20260827_15"></script>
+  <script src="js/firebase-config.js?v=20260827_15"></script>
+  <script src="js/firebase-service.js?v=20260827_15"></script>
+  <script src="js/kitchen.js?v=20260827_15"></script>
+</body>
+</html>

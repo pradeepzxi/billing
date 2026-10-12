@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>Aromas — Effortless Indulgence</title>
+  <meta name="description" content="Contemporary editorial food ordering & dining at Aromas. Explore curated burgers, artisanal pizzas, harvest bowls, and fresh beverages."/>
+  
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="styles/main.css"/>
+  
+  <!-- html2canvas for Receipt Image Export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  
+  <!-- Tailwind CSS with Design Tokens -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#ab3500",
+            "primary-container": "#ff6b35",
+            "on-primary": "#ffffff",
+            "on-primary-container": "#5f1900",
+            "primary-fixed": "#ffdbd0",
+            "primary-fixed-dim": "#ffb59d",
+            "on-primary-fixed": "#390c00",
+            "on-primary-fixed-variant": "#832600",
+            "surface": "#fff8f3",
+            "surface-dim": "#e0d9d2",
+            "surface-bright": "#fff8f3",
+            "surface-container-lowest": "#ffffff",
+            "surface-container-low": "#faf2ec",
+            "surface-container": "#f4ece6",
+            "surface-container-high": "#efe7e0",
+            "surface-container-highest": "#e9e1db",
+            "surface-variant": "#e9e1db",
+            "on-surface": "#1e1b17",
+            "on-surface-variant": "#594139",
+            "outline": "#8d7168",
+            "outline-variant": "#e1bfb5",
+            "background": "#fff8f3",
+            "on-background": "#1e1b17",
+            "secondary": "#5f5e5e",
+            "secondary-container": "#e2dfde",
+            "on-secondary": "#ffffff",
+            "tertiary": "#5e5e5d",
+            "tertiary-container": "#9a9998",
+            "error": "#ba1a1a",
+            "error-container": "#ffdad6"
+          },
+          borderRadius: {
+            "DEFAULT": "0.5rem",
+            "sm": "0.25rem",
+            "md": "0.75rem",
+            "lg": "1rem",
+            "xl": "1.5rem",
+            "2xl": "1.75rem",
+            "3xl": "2rem",
+            "full": "9999px"
+          },
+          spacing: {
+            "unit": "8px",
+            "container-padding-mobile": "20px",
+            "container-padding-desktop": "64px",
+            "gutter": "24px",
+            "section-gap": "80px"
+          },
+          fontFamily: {
+            "body-lg": ["Inter", "sans-serif"],
+            "body-md": ["Inter", "sans-serif"],
+            "button": ["Montserrat", "sans-serif"],
+            "display-lg": ["Montserrat", "sans-serif"],
+            "label-mono": ["JetBrains Mono", "monospace"],
+            "headline-md": ["Montserrat", "sans-serif"],
+            "display-lg-mobile": ["Montserrat", "sans-serif"]
+          },
+          fontSize: {
+            "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+            "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+            "button": ["16px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "700" }],
+            "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "800" }],
+            "label-mono": ["14px", { "lineHeight": "20px", "letterSpacing": "0.05em", "fontWeight": "500" }],
+            "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "700" }],
+            "display-lg-mobile": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "800" }]
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- Firebase Web SDK Compat CDN Scripts -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+</head>
+<body class="bg-background font-body-md text-on-surface antialiased min-h-screen flex flex-col selection:bg-primary selection:text-white">
+
+  <!-- ========================================================================= -->
+  <!-- GLOBAL NAVIGATION HEADER                                                  -->
+  <!-- ========================================================================= -->
+  <header class="fixed top-0 w-full z-50 bg-surface/90 backdrop-blur-xl shadow-[0_4px_24px_rgba(255,107,53,0.06)] border-b border-surface-container-high/60">
+    <div class="h-20 w-full px-container-padding-mobile lg:px-container-padding-desktop flex items-center justify-between">
+      
+      <!-- Brand & Location Pill -->
+      <div class="flex items-center gap-4 sm:gap-8">
+        <a href="#menu" class="flex items-center gap-3 cursor-pointer group">
+          <img alt="Aromas Logo" class="h-10 w-auto object-contain transition-transform group-hover:scale-105" src="assets/logo.png" onerror="this.src='https://lh3.googleusercontent.com/aida-public/AB6AXuDg6R0-usllSl-HHMLSZAIL1N32KUM3c9OZS3ClKM105sd_Ltl2fFdXDYjLIBk921jjeaP22JHuOtPI3zHBDbWzL9n4w6jVCZBYJJHvB_hZBuEPkb2I8oRZKw78Afmj9YlIB4DqWnCMH8Cx6t6d-aj3ZzSNOwbOmGmV915uty_nxibA2hEfrzAZ5gl4aLrU9yhKfJVk0kXgyaN0vb1a-0kIjvKxz1qHgx31Lp9q0xZMSvAVVUHROgWQ'"/>
+          <span class="font-display text-2xl md:text-3xl text-primary tracking-tight font-extrabold">Aromas</span>
+        </a>
+
+        <!-- Location Dropdown Pill & Popover Menu -->
+        <div class="relative location-dropdown-container">
+          <button id="location-dropdown-toggle" onclick="toggleLocationDropdown(event)" class="flex items-center gap-1.5 sm:gap-2 cursor-pointer py-1.5 sm:py-2 px-3 sm:px-4 rounded-full bg-surface-container hover:bg-surface-container-high transition-colors border border-outline-variant/30 text-xs select-none">
+            <span class="material-symbols-outlined text-primary text-[18px]">location_on</span>
+            <span class="font-body-md text-on-surface-variant text-xs active-location-name font-medium">Main Campus</span>
+            <span id="location-dropdown-arrow" class="material-symbols-outlined text-on-surface-variant text-sm transition-transform duration-200">expand_more</span>
+          </button>
+
+          <!-- Dropdown Popover Menu -->
+          <div id="location-dropdown-menu" class="hidden absolute left-0 top-full mt-2 w-72 bg-surface-container-lowest rounded-2xl shadow-2xl border border-surface-container-high p-2 z-50 animate-fadeIn">
+            <div class="px-3 py-2 text-[11px] font-mono font-bold uppercase tracking-wider text-on-surface-variant/80 border-b border-surface-container-high">
+              Select Dining Location
+            </div>
+            <div class="flex flex-col gap-1 mt-1">
+              <div onclick="selectLocationOption('Main Campus'); closeLocationDropdown();" class="location-drop-item flex items-center justify-between p-2.5 rounded-xl hover:bg-surface-container cursor-pointer transition-colors group">
+                <div class="flex flex-col">
+                  <span class="text-xs font-bold text-on-surface group-hover:text-primary transition-colors">Main Campus</span>
+                  <span class="text-[10px] text-on-surface-variant font-mono">Central Square • Closes 11 PM</span>
+                </div>
+                <span class="material-symbols-outlined text-primary text-sm check-main-campus">check</span>
+              </div>
+              <div onclick="selectLocationOption('AU Quasar'); closeLocationDropdown();" class="location-drop-item flex items-center justify-between p-2.5 rounded-xl hover:bg-surface-container cursor-pointer transition-colors group">
+                <div class="flex flex-col">
+                  <span class="text-xs font-bold text-on-surface group-hover:text-primary transition-colors">AU Quasar</span>
+                  <span class="text-[10px] text-on-surface-variant font-mono">Tech Hub • 24/7 Service</span>
+                </div>
+                <span class="material-symbols-outlined text-primary text-sm check-au-quasar">check</span>
+              </div>
+            </div>
+            <div class="mt-1 pt-1 border-t border-surface-container-high">
+              <a href="#location" onclick="closeLocationDropdown()" class="block text-center text-[11px] font-mono text-primary font-bold py-1.5 hover:underline">
+                View All Campus Details &rarr;
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Desktop Nav Links -->
+      <nav class="hidden md:flex items-center gap-7 lg:gap-8">
+        <a href="#location" data-path="location" class="font-button text-sm text-on-surface-variant hover:text-primary transition-colors">Location</a>
+        <a href="#menu" data-path="menu" class="font-button text-sm text-primary font-bold transition-colors">Menu</a>
+        <a href="#bill" data-path="bill" class="font-button text-sm text-on-surface-variant hover:text-primary transition-colors">My Bill</a>
+        <a href="#orders" data-path="orders" class="font-button text-sm text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1.5">
+          <span>Orders</span>
+          <span id="nav-orders-badge" class="hidden px-1.5 py-0.5 rounded-full bg-primary/15 text-primary text-[10px] font-mono font-bold">0</span>
+        </a>
+      </nav>
+
+      <!-- Right Action Items (Live Indicator + Cart + Auth Widget) -->
+      <div class="flex items-center gap-2.5 sm:gap-4">
+        
+        <!-- Live Cloud Connection State Indicator -->
+        <div id="live-connection-badge" class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-950/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 text-[11px] font-mono font-bold" title="Real-time Cloud Sync Active">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span id="live-connection-text">Live</span>
+        </div>
+
+        <!-- Quick Cart Trigger -->
+        <div class="cart-trigger relative cursor-pointer group p-2 hover:bg-surface-container rounded-full transition-colors" title="Open Cart">
+          <span class="material-symbols-outlined text-on-surface text-[26px] sm:text-[28px] group-hover:text-primary transition-colors">shopping_bag</span>
+          <div class="cart-count-badge hidden absolute top-0.5 right-0.5 w-5 h-5 bg-primary text-on-primary rounded-full flex items-center justify-center text-[10px] font-mono font-bold shadow-sm animate-pulse">
+            0
+          </div>
+        </div>
+
+        <!-- Dynamic User Auth & Profile Container -->
+        <div id="header-user-container" class="relative">
+          <!-- Rendered dynamically by JS -->
+          <button id="header-login-btn" onclick="openAuthModal()" class="flex items-center gap-2 py-2 px-4 rounded-full bg-primary text-on-primary font-button text-xs font-bold hover:bg-primary-container shadow-sm hover:scale-105 transition-all">
+            <span class="material-symbols-outlined text-[18px]">smartphone</span>
+            <span>Login</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ========================================================================= -->
+  <!-- MAIN CONTENT VIEWS ROUTER                                                 -->
+  <!-- ========================================================================= -->
+  <main class="w-full pt-20 bg-background flex-grow">
+
+    <!-- ======================================================================= -->
+    <!-- VIEW 1: CHOOSE YOUR LOCATION (#location)                                -->
+    <!-- ======================================================================= -->
+    <div id="location-view" class="hidden flex flex-col w-full px-container-padding-mobile lg:px-container-padding-desktop pb-section-gap">
+      
+      <section class="mt-8 md:mt-16 mb-10 flex flex-col items-start max-w-4xl">
+        <span class="font-label-mono text-label-mono text-primary uppercase tracking-widest mb-2">[ Campus Kiosks & Dining ]</span>
+        <h1 class="font-display-lg text-display-lg-mobile md:text-display-lg text-on-surface mb-3">What are you craving today?</h1>
+        <p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl">Choose your location to explore freshly prepared favourites and daily specials.</p>
+      </section>
+
+      <section id="location-cards-container" class="grid grid-cols-1 md:grid-cols-2 gap-gutter mb-12 relative">
+        <!-- Rendered by JS -->
+      </section>
+
+      <section id="location-action-section" class="flex justify-end opacity-0 translate-y-4 transition-all duration-500 pointer-events-none">
+        <button onclick="navigateTo('menu')" class="px-8 py-4 bg-primary text-on-primary font-button text-button rounded-full flex items-center gap-3 hover:scale-105 hover:shadow-lg hover:shadow-primary/20 transition-all">
+          Continue to Menu
+          <span class="material-symbols-outlined">east</span>
+        </button>
+      </section>
+
+    </div>
+
+    <!-- ======================================================================= -->
+    <!-- VIEW 2: THE MENU (#menu)                                                -->
+    <!-- ======================================================================= -->
+    <div id="menu-view" class="flex flex-col w-full relative overflow-hidden pb-32">
+      
+      <!-- Ambient Blurs -->
+      <div class="absolute top-0 right-0 w-3/4 h-[600px] bg-primary/5 rounded-bl-[120px] -z-10 blur-3xl opacity-60 pointer-events-none"></div>
+      <div class="absolute top-40 right-10 w-96 h-96 bg-primary-container/20 rounded-full mix-blend-multiply filter blur-3xl opacity-40 -z-10 pointer-events-none"></div>
+      <div class="absolute top-20 left-10 w-72 h-72 bg-tertiary-container/10 rounded-full mix-blend-multiply filter blur-3xl opacity-50 -z-10 pointer-events-none"></div>
+
+      <!-- Menu Hero -->
+      <section class="px-container-padding-mobile lg:px-container-padding-desktop pt-10 lg:pt-16 pb-12 relative">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter items-center">
+          
+          <div class="lg:col-span-5 flex flex-col gap-5 z-10">
+            <div class="flex items-center gap-3">
+              <span class="text-xs px-3 py-1 rounded-full bg-primary-fixed text-on-primary-fixed font-mono font-bold active-location-name">Main Campus</span>
+            </div>
+            <h1 class="font-display text-4xl sm:text-5xl lg:text-6xl text-on-background leading-[1.1]">
+              Good food.<br/>
+              <span class="text-primary">Better mood.</span>
+            </h1>
+            <p class="font-body-lg text-body-lg text-on-surface-variant max-w-md">
+              Freshly prepared favourites, curated for your everyday cravings. Experience effortless indulgence with lightning-fast pickup.
+            </p>
+
+            <!-- Search Bar -->
+            <div class="relative max-w-md mt-2">
+              <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+              <input type="text" id="menu-search-input" placeholder="Search samosa, butter chicken, biryani, dosa, chai..." class="w-full pl-12 pr-4 py-3.5 rounded-full bg-surface-container-lowest border border-outline-variant/60 focus:outline-none focus:border-primary text-sm shadow-sm transition-all" />
+            </div>
+          </div>
+
+          <!-- Hero Food Mockup -->
+          <div class="lg:col-span-7 relative mt-8 lg:mt-0">
+            <div class="relative w-full aspect-square max-w-[540px] ml-auto">
+              <div class="absolute inset-0 bg-primary-container rounded-[120px] rounded-tr-none rotate-3 opacity-20 transform transition-transform duration-700 hover:rotate-6"></div>
+              <div class="absolute inset-4 bg-surface rounded-[100px] rounded-bl-none -rotate-2 overflow-hidden shadow-2xl">
+                <img class="w-full h-full object-cover transform scale-105 transition-transform duration-700 hover:scale-100" alt="Butter Chicken and Fresh Naan" src="https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?auto=format&fit=crop&w=800&q=80" onerror="this.src='https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=800&q=80'"/>
+              </div>
+              <div onclick="addItemToCart('main-butter-chicken')" class="absolute bottom-10 -left-4 sm:-left-8 bg-surface px-6 py-4 rounded-2xl shadow-xl flex items-center gap-4 backdrop-blur-md bg-white/95 cursor-pointer hover:scale-105 transition-all border border-outline-variant/30 group">
+                <div class="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-on-primary group-hover:bg-primary-container transition-colors">
+                  <span class="material-symbols-outlined">local_fire_department</span>
+                </div>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <p class="font-label-mono text-xs text-on-surface-variant">Signature</p>
+                    <span class="text-xs font-bold text-primary">₹160</span>
+                  </div>
+                  <p class="font-headline text-base font-bold text-on-background group-hover:text-primary transition-colors">Butter Chicken &rarr;</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- Sticky Category Bar -->
+      <section class="w-full sticky top-20 z-40 bg-background/90 backdrop-blur-xl border-b border-surface-container-high py-3.5 mb-8 shadow-[0_8px_32px_rgba(171,53,0,0.03)]">
+        <div class="px-container-padding-mobile lg:px-container-padding-desktop flex items-center justify-between gap-4">
+          <div id="category-tabs-bar" class="flex items-center gap-3 overflow-x-auto no-scrollbar scroll-smooth py-1">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+        <!-- Dietary Chips -->
+        <div class="px-container-padding-mobile lg:px-container-padding-desktop pt-2.5 flex items-center gap-2 overflow-x-auto no-scrollbar">
+          <span class="text-xs text-on-surface-variant font-mono mr-1">Filter:</span>
+          <div id="dietary-chips-bar" class="flex items-center gap-2">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- Menu Items Grid -->
+      <section class="px-container-padding-mobile lg:px-container-padding-desktop pb-section-gap">
+        <div class="flex items-end justify-between mb-8">
+          <div>
+            <h2 class="font-display text-2xl sm:text-3xl text-on-background">Curated Selections</h2>
+            <p class="text-xs text-on-surface-variant mt-1 font-mono">Handcrafted with premium ingredients</p>
+          </div>
+          <button onclick="setCategoryFilter('all')" class="flex items-center gap-1.5 font-button text-xs sm:text-sm text-primary hover:text-on-primary-fixed-variant transition-colors">
+            View All (<span id="total-menu-count">60</span>) <span class="material-symbols-outlined text-base">arrow_forward</span>
+          </button>
+        </div>
+
+        <div id="menu-items-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-gutter">
+          <!-- Rendered dynamically by JS -->
+        </div>
+      </section>
+
+    </div>
+
+    <!-- ======================================================================= -->
+    <!-- VIEW 3: YOUR BILL & RECEIPT (#bill)                                     -->
+    <!-- ======================================================================= -->
+    <div id="bill-view" class="hidden flex flex-col w-full items-center py-8 md:py-12 px-container-padding-mobile">
+      
+      <!-- Receipt Mount -->
+      <div id="bill-receipt-container" class="w-full flex justify-center">
+        <!-- Rendered by JS -->
+      </div>
+
+    </div>
+
+    <!-- ======================================================================= -->
+    <!-- VIEW 4: LIVE ORDER TRACKING & PREVIOUS ORDERS (#orders)                 -->
+    <!-- ======================================================================= -->
+    <div id="orders-view" class="hidden flex flex-col w-full py-10 md:py-16 px-container-padding-mobile lg:px-container-padding-desktop">
+      
+      <div class="mb-6 text-center max-w-2xl mx-auto">
+        <span class="font-label-mono text-label-mono text-primary uppercase tracking-widest">[ Kitchen Dispatch & Cloud Records ]</span>
+        <h2 class="font-display text-3xl sm:text-4xl text-on-surface mt-1">Orders & Dining History</h2>
+        <p class="font-body text-sm text-on-surface-variant mt-1">Track active kitchen tokens and access all your previous orders stored securely in Firebase.</p>
+      </div>
+
+      <!-- Segmented Tabs: Live Tracker vs Previous Orders -->
+      <div class="flex justify-center mb-8">
+        <div class="inline-flex p-1.5 rounded-full bg-surface-container-high border border-outline-variant/30 shadow-inner">
+          <button id="tab-orders-live" onclick="setOrdersTab('live')" class="px-6 py-2.5 rounded-full font-button text-xs sm:text-sm font-bold transition-all duration-300 flex items-center gap-2 bg-on-background text-on-primary shadow-sm">
+            <span class="material-symbols-outlined text-[18px]">outdoor_grill</span>
+            <span>Live Tracker</span>
+          </button>
+          <button id="tab-orders-history" onclick="setOrdersTab('history')" class="px-6 py-2.5 rounded-full font-button text-xs sm:text-sm font-bold transition-all duration-300 flex items-center gap-2 text-on-surface hover:text-primary">
+            <span class="material-symbols-outlined text-[18px]">history</span>
+            <span>Previous Orders</span>
+            <span id="tab-history-count" class="px-2 py-0.5 rounded-full bg-primary/20 text-primary text-[11px] font-mono">0</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Dynamic Orders Content Container -->
+      <div id="orders-content-container" class="w-full max-w-4xl mx-auto">
+        <!-- Rendered by JS -->
+      </div>
+
+    </div>
+
+
+
+  </main>
+
+  <!-- ========================================================================= -->
+  <!-- QUICK-CART SLIDE-OVER DRAWER                                              -->
+  <!-- ========================================================================= -->
+  <div id="cart-drawer" class="hidden fixed inset-0 z-50 overflow-hidden">
+    <div id="cart-drawer-backdrop" class="drawer-backdrop absolute inset-0"></div>
+    <div class="fixed inset-y-0 right-0 max-w-full flex pl-10">
+      <div class="drawer-panel w-screen max-w-md bg-surface-container-lowest shadow-2xl flex flex-col">
+        
+        <!-- Drawer Header -->
+        <div class="p-6 bg-surface-container flex items-center justify-between border-b border-surface-container-high">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary text-2xl">shopping_bag</span>
+            <h3 class="font-display text-xl font-bold text-on-surface">Your Cart</h3>
+          </div>
+          <button id="close-cart-btn" class="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center hover:bg-surface-container-highest transition-colors">
+            <span class="material-symbols-outlined text-base">close</span>
+          </button>
+        </div>
+
+        <!-- Drawer Items List -->
+        <div id="drawer-items-list" class="flex-1 p-6 overflow-y-auto flex flex-col gap-3">
+          <!-- Rendered by JS -->
+        </div>
+
+        <!-- Drawer Footer / Checkout Button -->
+        <div id="drawer-totals-box" class="p-6 bg-surface-container border-t border-surface-container-high flex flex-col gap-4">
+          <div class="flex justify-between items-center font-receipt text-sm">
+            <span class="text-on-surface-variant">Estimated Subtotal</span>
+            <span id="drawer-subtotal" class="font-bold text-on-surface">₹0</span>
+          </div>
+          <div class="flex justify-between items-center font-display text-xl font-extrabold text-primary">
+            <span>Total Payable</span>
+            <span id="drawer-total">₹0</span>
+          </div>
+
+          <div class="flex gap-3">
+            <button onclick="clearCart()" class="py-3 px-4 rounded-full border border-outline-variant text-xs font-mono font-bold text-on-surface-variant hover:text-error hover:border-error transition-colors">
+              Clear
+            </button>
+            <button onclick="closeCartDrawer(); navigateTo('bill');" class="flex-1 py-3.5 bg-primary text-on-primary font-button text-sm rounded-full flex items-center justify-center gap-2 hover:scale-[1.02] shadow-lg shadow-primary/20 transition-all">
+              <span>Proceed to Pay</span>
+              <span class="material-symbols-outlined text-base">payments</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- ITEM CUSTOMIZATION MODAL                                                  -->
+  <!-- ========================================================================= -->
+  <div id="customize-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div onclick="closeCustomizeModal()" class="modal-backdrop absolute inset-0 bg-black/50"></div>
+    <div id="customize-modal-content" class="modal-card relative w-full max-w-lg bg-surface-container-lowest rounded-3xl p-6 shadow-2xl z-10 max-h-[90vh] overflow-y-auto">
+      <!-- Injected by JS -->
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- PAYMENT MODAL (WITH CARD DETAILS & COUNTER TOKEN OPTIONS)                 -->
+  <!-- ========================================================================= -->
+  <div id="payment-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+    <div onclick="closePaymentModal()" class="modal-backdrop absolute inset-0 bg-black/60"></div>
+    <div id="payment-modal-content" class="modal-card relative w-full max-w-lg bg-surface-container-lowest rounded-3xl p-6 sm:p-8 shadow-2xl z-10 max-h-[90vh] overflow-y-auto border border-surface-container-high">
+      <!-- Injected by JS -->
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- PHONE NUMBER AUTHENTICATION (FIREBASE) MODAL                              -->
+  <!-- ========================================================================= -->
+  <div id="auth-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div onclick="closeAuthModal()" class="modal-backdrop absolute inset-0 bg-black/60"></div>
+    <div id="auth-modal-content" class="modal-card relative w-full max-w-md bg-surface-container-lowest rounded-3xl p-6 sm:p-8 shadow-2xl z-10 border border-surface-container-high overflow-hidden">
+      
+      <button onclick="closeAuthModal()" class="absolute top-5 right-5 w-8 h-8 rounded-full bg-surface-container flex items-center justify-center hover:bg-surface-container-high transition-colors">
+        <span class="material-symbols-outlined text-sm text-on-surface-variant">close</span>
+      </button>
+
+      <div class="flex flex-col items-center text-center mb-6">
+        <div class="w-14 h-14 rounded-2xl bg-primary-fixed flex items-center justify-center text-primary mb-3 shadow-inner">
+          <span class="material-symbols-outlined text-3xl">phone_iphone</span>
+        </div>
+        <h3 id="auth-modal-title" class="font-display text-2xl font-black text-on-surface">Sign in with Phone</h3>
+        <p id="auth-modal-subtitle" class="font-body text-xs text-on-surface-variant max-w-xs mt-1">
+          Login with your phone number to start ordering food and view order history.
+        </p>
+      </div>
+
+      <!-- STEP 1: Phone Input -->
+      <div id="auth-step-phone" class="flex flex-col gap-4">
+        <div>
+          <label class="block text-xs font-mono font-bold text-on-surface-variant uppercase tracking-wider mb-2">
+            Mobile Number
+          </label>
+          <div class="flex items-center gap-2">
+            <div class="px-3.5 py-3 rounded-2xl bg-surface-container border border-outline-variant/60 text-xs font-mono font-bold text-on-surface select-none">
+              🇮🇳 +91
+            </div>
+            <input 
+              type="tel" 
+              id="auth-phone-input" 
+              placeholder="98765 43210" 
+              maxlength="10" 
+              class="flex-1 px-4 py-3 rounded-2xl bg-surface-container border border-outline-variant/60 focus:outline-none focus:border-primary text-sm font-receipt font-bold tracking-wider text-on-surface placeholder:text-on-surface-variant/40"
+              onkeypress="if(event.key==='Enter') requestPhoneOtp();"
+            />
+          </div>
+        </div>
+
+        <div id="recaptcha-container" class="my-1 flex justify-center"></div>
+
+        <button 
+          id="auth-send-otp-btn" 
+          onclick="requestPhoneOtp()" 
+          class="w-full py-3.5 bg-primary text-on-primary font-button text-sm rounded-full shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
+        >
+          <span class="material-symbols-outlined text-lg">sms</span>
+          <span>Send Verification Code</span>
+        </button>
+
+        <!-- 1-Click Instant Login (No waiting for SMS) -->
+        <button 
+          type="button"
+          onclick="loginAsQuickGuest()" 
+          class="w-full py-3 px-4 rounded-full bg-emerald-950/10 hover:bg-emerald-600 text-emerald-800 dark:text-emerald-300 hover:text-white border border-emerald-500/30 text-xs font-mono font-bold transition-all flex items-center justify-center gap-2 shadow-sm active:scale-95"
+        >
+          <span class="material-symbols-outlined text-base text-emerald-500 hover:text-white">bolt</span>
+          <span>⚡ 1-Click Instant Login (+91 98765 43210)</span>
+        </button>
+
+        <div class="p-2.5 bg-surface-container rounded-2xl border border-surface-container-high flex items-center justify-between mt-0.5">
+          <div class="flex flex-col">
+            <span class="text-[11px] font-mono text-on-surface font-bold">Quick Demo Mode</span>
+            <span class="text-[10px] text-on-surface-variant">Auto-fill phone number</span>
+          </div>
+          <button type="button" onclick="fillQuickTestPhone()" class="px-3 py-1 bg-surface-container-highest hover:bg-primary hover:text-white rounded-xl text-xs font-mono font-bold text-primary transition-colors">
+            +91 98765 43210
+          </button>
+        </div>
+
+        <div class="flex items-center justify-between text-[11px] font-mono text-on-surface-variant/70 pt-2 border-t border-surface-container-high">
+          <span id="auth-firebase-status" class="flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-veg"></span> Firebase Ready
+          </span>
+          <button onclick="openFirebaseSettingsModal()" class="hover:text-primary underline cursor-pointer">
+            Firebase Config
+          </button>
+        </div>
+      </div>
+
+      <!-- STEP 2: OTP Input -->
+      <div id="auth-step-otp" class="hidden flex flex-col gap-5">
+        <div class="text-center">
+          <p class="text-xs text-on-surface-variant">We sent a 6-digit code to</p>
+          <p id="auth-target-phone-display" class="font-mono font-bold text-sm text-primary mt-0.5">+91 98765 43210</p>
+        </div>
+
+        <div id="auth-demo-code-banner" class="p-3 bg-primary-fixed text-on-primary-fixed rounded-2xl text-center border border-primary/20 flex items-center justify-center gap-2">
+          <span class="material-symbols-outlined text-base">info</span>
+          <span class="text-xs font-mono font-bold">Demo OTP: <span id="auth-demo-code-val" class="underline">123456</span></span>
+        </div>
+
+        <div>
+          <label class="block text-xs font-mono font-bold text-on-surface-variant uppercase tracking-wider text-center mb-2">
+            Enter 6-Digit OTP
+          </label>
+          <input 
+            type="text" 
+            id="auth-otp-input" 
+            placeholder="• • • • • •" 
+            maxlength="6" 
+            class="w-full text-center py-3.5 tracking-[0.6em] text-2xl font-mono font-black rounded-2xl bg-surface-container border-2 border-outline-variant/60 focus:outline-none focus:border-primary text-primary"
+            onkeypress="if(event.key==='Enter') submitPhoneOtp();"
+            autocomplete="one-time-code"
+          />
+        </div>
+
+        <button 
+          id="auth-verify-otp-btn" 
+          onclick="submitPhoneOtp()" 
+          class="w-full py-4 bg-primary text-on-primary font-button text-sm rounded-full shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
+        >
+          <span class="material-symbols-outlined text-lg">verified_user</span>
+          <span>Verify & Log In</span>
+        </button>
+
+        <div class="flex items-center justify-between text-xs font-mono">
+          <button onclick="backToPhoneStep()" class="text-on-surface-variant hover:text-primary flex items-center gap-1">
+            &larr; Change Phone
+          </button>
+          <button id="auth-resend-btn" onclick="requestPhoneOtp()" class="text-primary font-bold hover:underline">
+            Resend Code
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- FIREBASE SETTINGS MODAL                                                   -->
+  <!-- ========================================================================= -->
+  <div id="firebase-settings-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div onclick="closeFirebaseSettingsModal()" class="modal-backdrop absolute inset-0 bg-black/60"></div>
+    <div class="modal-card relative w-full max-w-lg bg-surface-container-lowest rounded-3xl p-6 sm:p-8 shadow-2xl z-10 border border-surface-container-high">
+      
+      <div class="flex justify-between items-start mb-4">
+        <div>
+          <h3 class="font-display text-xl font-black text-on-surface">Firebase Configuration</h3>
+          <p class="text-xs text-on-surface-variant mt-0.5">Connect your live Google Firebase Web App credentials</p>
+        </div>
+        <button onclick="closeFirebaseSettingsModal()" class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center hover:bg-surface-container-high">
+          <span class="material-symbols-outlined text-sm">close</span>
+        </button>
+      </div>
+
+      <div class="flex flex-col gap-3 mb-5">
+        <div>
+          <label class="block text-[11px] font-mono font-bold text-on-surface-variant uppercase mb-1">API Key</label>
+          <input type="text" id="fb-cfg-apiKey" placeholder="AIzaSy..." class="w-full px-3 py-2 rounded-xl bg-surface-container border border-outline-variant text-xs font-mono" />
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[11px] font-mono font-bold text-on-surface-variant uppercase mb-1">Auth Domain</label>
+            <input type="text" id="fb-cfg-authDomain" placeholder="your-app.firebaseapp.com" class="w-full px-3 py-2 rounded-xl bg-surface-container border border-outline-variant text-xs font-mono" />
+          </div>
+          <div>
+            <label class="block text-[11px] font-mono font-bold text-on-surface-variant uppercase mb-1">Project ID</label>
+            <input type="text" id="fb-cfg-projectId" placeholder="your-app-id" class="w-full px-3 py-2 rounded-xl bg-surface-container border border-outline-variant text-xs font-mono" />
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[11px] font-mono font-bold text-on-surface-variant uppercase mb-1">Storage Bucket</label>
+            <input type="text" id="fb-cfg-storageBucket" placeholder="your-app.appspot.com" class="w-full px-3 py-2 rounded-xl bg-surface-container border border-outline-variant text-xs font-mono" />
+          </div>
+          <div>
+            <label class="block text-[11px] font-mono font-bold text-on-surface-variant uppercase mb-1">App ID</label>
+            <input type="text" id="fb-cfg-appId" placeholder="1:123456:web:abcd" class="w-full px-3 py-2 rounded-xl bg-surface-container border border-outline-variant text-xs font-mono" />
+          </div>
+        </div>
+      </div>
+
+      <div class="flex gap-2">
+        <button onclick="resetFirebaseConfigDefault()" class="px-4 py-3 rounded-full border border-outline-variant text-xs font-mono font-bold text-on-surface-variant hover:text-error transition-colors">
+          Reset Demo
+        </button>
+        <button onclick="saveCustomFirebaseConfig()" class="flex-1 py-3 bg-primary text-on-primary font-button text-xs font-bold rounded-full shadow-md hover:bg-primary-container transition-all">
+          Save & Connect Project
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- HISTORICAL ORDER RECEIPT MODAL                                            -->
+  <!-- ========================================================================= -->
+  <div id="past-receipt-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+    <div onclick="closePastReceiptModal()" class="modal-backdrop absolute inset-0 bg-black/60"></div>
+    <div class="relative w-full max-w-md my-8 z-10">
+      <div id="past-receipt-content" class="w-full flex justify-center">
+        <!-- Rendered by JS -->
+      </div>
+      <div class="flex justify-center gap-3 mt-4 no-print">
+        <button onclick="printReceiptSlip()" class="px-6 py-2.5 rounded-full bg-surface-container-lowest text-primary font-button text-xs font-bold border border-primary shadow-sm hover:scale-105 transition-all flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-sm">print</span> Print Receipt
+        </button>
+        <button onclick="closePastReceiptModal()" class="px-6 py-2.5 rounded-full bg-on-background text-on-primary font-button text-xs font-bold shadow-sm hover:scale-105 transition-all">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- ORDER READY PICKUP CELEBRATION MODAL                                      -->
+  <!-- ========================================================================= -->
+  <div id="order-ready-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div onclick="closeOrderReadyModal()" class="modal-backdrop absolute inset-0 bg-black/60"></div>
+    <div class="modal-card relative w-full max-w-md bg-surface-container-lowest rounded-3xl p-6 sm:p-8 shadow-2xl z-10 border-2 border-veg text-center overflow-hidden">
+      <div class="w-20 h-20 rounded-full bg-veg/15 text-veg flex items-center justify-center mx-auto mb-4 animate-bounce">
+        <span class="material-symbols-outlined text-5xl">notifications_active</span>
+      </div>
+      <span class="font-mono text-xs text-veg font-bold uppercase tracking-widest">[ Kitchen Ready Dispatch ]</span>
+      <h3 class="font-display text-2xl sm:text-3xl font-black text-on-surface mt-1 mb-2">Your Order is Cooked & Ready!</h3>
+      <p id="order-ready-modal-msg" class="font-body text-xs sm:text-sm text-on-surface-variant mb-6">
+        Your hot food is packed and waiting at the counter. Please present your Live Pickup Token!
+      </p>
+
+      <div class="bg-surface-container p-4 rounded-2xl border border-surface-container-high mb-6">
+        <span class="text-xs font-mono text-on-surface-variant uppercase font-bold">Pickup Token Number</span>
+        <div id="order-ready-modal-token" class="font-display text-4xl sm:text-5xl font-black text-veg mt-1">#42</div>
+        <p id="order-ready-modal-loc" class="text-xs font-mono text-on-surface-variant mt-1">📍 Main Campus</p>
+      </div>
+
+      <div>
+        <button onclick="closeOrderReadyModal()" class="w-full py-3.5 bg-veg hover:bg-emerald-700 text-white font-button text-sm font-bold rounded-full shadow-lg shadow-veg/25 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+          <span class="material-symbols-outlined text-lg">check_circle</span>
+          <span>Dismiss</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MOBILE FLOATING BOTTOM NAVIGATION BAR                                     -->
+  <!-- ========================================================================= -->
+  <div class="bottom-nav-bar md:hidden fixed bottom-4 left-4 right-4 z-40 bg-surface/95 backdrop-blur-xl border border-surface-container-high/80 rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-2 flex items-center justify-around">
+    <a href="#location" data-path="location" class="flex flex-col items-center gap-0.5 text-on-surface-variant hover:text-primary transition-colors text-[10px] font-mono">
+      <span class="material-symbols-outlined text-[20px]">location_on</span>
+      <span>Location</span>
+    </a>
+    <a href="#menu" data-path="menu" class="flex flex-col items-center gap-0.5 text-primary font-bold transition-colors text-[10px] font-mono">
+      <span class="material-symbols-outlined text-[20px]">restaurant_menu</span>
+      <span>Menu</span>
+    </a>
+    <a href="#bill" data-path="bill" class="flex flex-col items-center gap-0.5 text-on-surface-variant hover:text-primary transition-colors text-[10px] font-mono">
+      <span class="material-symbols-outlined text-[20px]">receipt_long</span>
+      <span>My Bill</span>
+    </a>
+    <a href="#orders" data-path="orders" class="flex flex-col items-center gap-0.5 text-on-surface-variant hover:text-primary transition-colors text-[10px] font-mono">
+      <span class="material-symbols-outlined text-[20px]">outdoor_grill</span>
+      <span>Orders</span>
+    </a>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- FOOTER                                                                    -->
+  <!-- ========================================================================= -->
+  <footer class="w-full bg-surface-container-high/40 border-t border-surface-container-high py-12 px-container-padding-mobile lg:px-container-padding-desktop mt-auto no-print">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+      <div class="flex items-center gap-3">
+        <img alt="Aromas Logo" class="h-8 w-auto object-contain" src="assets/logo.png" onerror="this.src='https://lh3.googleusercontent.com/aida-public/AB6AXuDg6R0-usllSl-HHMLSZAIL1N32KUM3c9OZS3ClKM105sd_Ltl2fFdXDYjLIBk921jjeaP22JHuOtPI3zHBDbWzL9n4w6jVCZBYJJHvB_hZBuEPkb2I8oRZKw78Afmj9YlIB4DqWnCMH8Cx6t6d-aj3ZzSNOwbOmGmV915uty_nxibA2hEfrzAZ5gl4aLrU9yhKfJVk0kXgyaN0vb1a-0kIjvKxz1qHgx31Lp9q0xZMSvAVVUHROgWQ'"/>
+        <span class="font-display text-xl text-primary font-bold">Aromas</span>
+        <span class="text-xs text-on-surface-variant ml-2">© 2026 Aromas Food & Beverage. Contemporary Editorial Culinary Experience.</span>
+      </div>
+      <div class="flex items-center gap-6 text-xs font-mono text-on-surface-variant">
+        <a href="#location" class="hover:text-primary transition-colors">Locations</a>
+        <a href="#menu" class="hover:text-primary transition-colors">Menu Catalog</a>
+        <a href="#bill" class="hover:text-primary transition-colors">Receipt</a>
+        <a href="kitchen.html" target="_blank" class="hover:text-primary transition-colors flex items-center gap-1 font-bold text-primary">👨‍🍳 Kitchen Portal ↗</a>
+        <button onclick="openAuthModal()" class="hover:text-primary transition-colors cursor-pointer">Account</button>
+      </div>
+    </div>
+  </footer>
+
+  <!-- DEDICATED PRINT CONTAINER (Only element rendered during print / PDF export) -->
+  <div id="print-receipt-section" class="no-screen"></div>
+
+  <!-- Scripts -->
+  <script src="js/firebase-config.js?v=20260827_15"></script>
+  <script src="js/firebase-service.js?v=20260827_15"></script>
+  <script src="js/menu-data.js?v=20260827_15"></script>
+  <script src="js/app.js?v=20260827_15"></script>
+</body>
+</html>

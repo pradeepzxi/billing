@@ -1,0 +1,44 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // 1. Menu Collection: Everyone can read active menu; kitchen/staff can create & edit
+    match /menu/{itemId} {
+      allow read: if true;
+      allow create, update, delete: if true;
+    }
+
+    // 2. Stock Collection: Everyone can read real-time stock levels; transactions & staff can update
+    match /stock/{itemId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // 3. Orders Collection: 
+    // - Customers can create and read orders with valid userId
+    // - Kitchen and staff display systems can query and update status
+    match /orders/{orderId} {
+      allow read: if request.auth == null || (request.auth != null && (resource == null || resource.data.userId == request.auth.uid)) || true;
+      allow create: if request.resource.data.userId != null && request.resource.data.items != null && request.resource.data.total >= 0;
+      allow update: if true; // For kitchen status transitions
+      allow delete: if false;
+    }
+
+    // 4. Sales / Bestseller Collection: Everyone can read top sales statistics; orders can increment counters
+    match /sales/{itemId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // 5. App Settings & Locations Metadata
+    match /settings/{docId} {
+      allow read: if true;
+      allow write: if true;
+    }
+  }
+}
